@@ -15,32 +15,38 @@ public class Client {
 
         int serverPort = Integer.parseInt(args[1]);
         Scanner scanner = new Scanner(System.in);
-        System.out.println("Type the action you'd like to take: List, Delete, Rename, Download, or Upload: ");
-        String action = scanner.nextLine().toUpperCase();
-        SocketChannel channel = SocketChannel.open();
-        channel.connect(new InetSocketAddress(args[0], serverPort));
+        loop: while(true){
+            System.out.println("Type the action you'd like to take: List, Delete, Rename, Download, or Upload. You can also type Q to quit\n Command: ");
+            String action = scanner.nextLine().toUpperCase();
+            SocketChannel channel = SocketChannel.open();
+            channel.connect(new InetSocketAddress(args[0], serverPort));
 
-        switch(action){
-            case "LIST":
-                listFiles();
-                break;
-            case "DELETE":
-                deleteFile();
-                break;
-            case "RENAME":
-                renameFiles();
-                break;
-            case "DOWNLOAD":
-                downloadFile(channel, scanner);
-                break;
-            case "UPLOAD":
-                uploadFile();
-                break;
+            switch(action){
+                case "LIST":
+                    listFiles();
+                    break;
+                case "DELETE":
+                    deleteFile();
+                    break;
+                case "RENAME":
+                    renameFiles();
+                    break;
+                case "DOWNLOAD":
+                    downloadFile(channel, scanner);
+                    break;
+                case "UPLOAD":
+                    uploadFile();
+                    break;
+                case "Q":
+                    quit(channel);
+                    break loop;
+            }
         }
 
+    }
+
+    private static void quit(SocketChannel channel) throws IOException {
         channel.close();
-
-
     }
 
     private static void uploadFile() {
@@ -49,7 +55,7 @@ public class Client {
     private static void downloadFile(SocketChannel channel, Scanner scanner) throws IOException {
         System.out.println("Enter the file name to be downloaded");
         String fileName =  scanner.nextLine();
-        String request = "DOWNLOAD " + fileName;
+        String request = "DOWNLOAD|" + fileName;
         ByteBuffer byteBuffer = ByteBuffer.wrap(fileName.getBytes());
         channel.write(byteBuffer);
         //request to close channel from client to server direction
