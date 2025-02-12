@@ -23,7 +23,7 @@ public class Client {
 
             switch(action){
                 case "LIST":
-                    listFiles();
+                    listFiles(channel);
                     break;
                 case "DELETE":
                     deleteFile();
@@ -56,10 +56,9 @@ public class Client {
         System.out.println("Enter the file name to be downloaded");
         String fileName =  scanner.nextLine();
         String request = "DOWNLOAD|" + fileName;
-        ByteBuffer byteBuffer = ByteBuffer.wrap(fileName.getBytes());
+        ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBytes());
         channel.write(byteBuffer);
         //request to close channel from client to server direction
-        channel.shutdownOutput();
         FileOutputStream fileOutputStream = new FileOutputStream("ClientFiles/" + fileName, true);
         FileChannel fileChannel = fileOutputStream.getChannel();
         ByteBuffer fileContent = ByteBuffer.allocate(1024);
@@ -78,8 +77,32 @@ public class Client {
     private static void deleteFile() {
     }
 
-    private static void listFiles(){
+    private static void listFiles(SocketChannel channel) throws IOException {
+        System.out.println("Requesting file list from server...");
+        String request = "LIST";
+        ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBytes());
+        channel.write(byteBuffer);
 
+        // Read the response from the server
+        ByteBuffer responseBuffer = ByteBuffer.allocate(1024);
+        while (channel.read(responseBuffer) >= 0) {
+            responseBuffer.flip();
+            String response = new String(responseBuffer.array(), 0, responseBuffer.limit());
+            if (response.startsWith("FILE_LIST:")) {
+                // Extract the file list from the response
+                String fileList = response.substring(11);
+                System.out.println("Files on the server:");
+                String[] files = fileList.split(",");
+                for (String file : files) {
+                    System.out.println(file.trim());
+                }
+                break;
+            }
+            else{
+                System.out.println("No files found");
+            }
+            responseBuffer.clear();
+        }
     }
 
 }
