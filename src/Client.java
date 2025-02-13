@@ -140,7 +140,37 @@ public class Client {
 
     }
 
-    private static void deleteFile() {
+    private static void deleteFile(SocketChannel channel, Scanner scanner) throws IOException {
+        System.out.println("Enter the file name to be deleted:");
+        String fileName = scanner.nextLine();
+
+        // Construct the request header
+        String request = "DELETE|" + fileName;
+        // Send the request header
+        ByteBuffer headerBuffer = ByteBuffer.wrap(request.getBytes());
+        channel.write(headerBuffer);
+
+        System.out.println("Delete request sent: " + request);
+
+        // Prepare to read the server's response
+        ByteBuffer responseBuffer = ByteBuffer.allocate(2); // Assuming response is a single character
+        int bytesRead = channel.read(responseBuffer);
+
+        if (bytesRead > 0) {
+            responseBuffer.flip(); // Prepare buffer for reading
+            char response = (char) responseBuffer.get(); // Read the response character
+
+            // Check the response from the server
+            if (response == 'S') {
+                System.out.println("Operation successful");
+            } else if (response == 'F') {
+                System.out.println("Operation Failed");
+            } else {
+                System.out.println("Unexpected response from server: " + response);
+            }
+        } else {
+            System.out.println("No response received from server.");
+        }
     }
 
     private static void listFiles(SocketChannel channel) throws IOException {
