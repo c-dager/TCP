@@ -209,7 +209,7 @@ public class Client {
             String response = new String(responseBuffer.array(), 0, responseBuffer.limit());
             if (response.startsWith("FILE_LIST:")) {
                 // Extract the file list from the response
-                String fileList = response.substring(11);
+                String fileList = response.substring(10);
                 System.out.println("Files on the server:");
                 String[] files = fileList.split(",");
                 for (String file : files) {

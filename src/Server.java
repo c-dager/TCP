@@ -6,6 +6,10 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 
 public class Server {
     public static void main(String[] args) throws Exception {
@@ -24,7 +28,7 @@ public class Server {
 
             switch(action){
                 case "LIST":
-                    listFiles();
+                    listFiles(serveChannel);
                     break;
                 case "DELETE":
                     deleteFile();
@@ -56,9 +60,30 @@ public class Server {
 
     }
 
-    private static void listFiles() {
+    private static void listFiles(SocketChannel clientChannel) throws IOException {
+        System.out.println("Requesting file list...");
 
+        // Get the list of files in the specified directory
+        Path dirPath = Paths.get("ServerFiles");
+        List<Path> fileList = Files.list(dirPath).toList();
+
+        // Create a response string
+        StringBuilder response = new StringBuilder("FILE_LIST:");
+        for (Path file : fileList) {
+            response.append(file.getFileName()).append(","); // Append file names
+        }
+
+        // Remove the last comma if there are files
+        if (!fileList.isEmpty()) {
+            response.setLength(response.length() - 1); // Remove the last comma
+        }
+
+        // Send the response to the client
+        ByteBuffer responseBuffer = ByteBuffer.wrap(response.toString().getBytes());
+        clientChannel.write(responseBuffer);
+        System.out.println("Sent file list to client: " + response);
     }
+
 
     private static void uploadFileToClient(SocketChannel serveChannel, String fileName) throws IOException {
         System.out.println("File name message: " + fileName);
