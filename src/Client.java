@@ -79,7 +79,25 @@ public class Client {
             channel.write(contentBuffer);
         }
 
-        System.out.println("File upload complete.");
+        // Prepare to read the server's response
+        ByteBuffer responseBuffer = ByteBuffer.allocate(2); // Assuming response is a single character
+        int bytesRead = channel.read(responseBuffer);
+
+        if (bytesRead > 0) {
+            responseBuffer.flip(); // Prepare buffer for reading
+            char response = (char) responseBuffer.get(); // Read the response character
+
+            // Check the response from the server
+            if (response == 'S') {
+                System.out.println("Operation successful");
+            } else if (response == 'F') {
+                System.out.println("Operation Failed");
+            } else {
+                System.out.println("Unexpected response from server: " + response);
+            }
+        } else {
+            System.out.println("No response received from server.");
+        }
 
     }
 
