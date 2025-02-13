@@ -28,10 +28,10 @@ public class Client {
                     listFiles(channel);
                     break;
                 case "DELETE":
-                    deleteFile();
+                    deleteFile(channel, scanner);
                     break;
                 case "RENAME":
-                    renameFiles();
+                    renameFiles(channel, scanner);
                     break;
                 case "DOWNLOAD":
                     downloadFile(channel, scanner);
