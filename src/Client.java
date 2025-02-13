@@ -17,11 +17,11 @@ public class Client {
 
         int serverPort = Integer.parseInt(args[1]);
         Scanner scanner = new Scanner(System.in);
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(args[0], serverPort));
         loop: while(true){
             System.out.println("Type the action you'd like to take:\nList\nDelete\nRename\nDownload\nUpload\nYou can also type Q to quit.\nAction: ");
             String action = scanner.nextLine().toUpperCase();
-            SocketChannel channel = SocketChannel.open();
-            channel.connect(new InetSocketAddress(args[0], serverPort));
 
             switch(action){
                 case "LIST":
@@ -31,7 +31,7 @@ public class Client {
                     deleteFile(channel, scanner);
                     break;
                 case "RENAME":
-                    renameFiles(channel, scanner);
+                    renameFile(channel, scanner);
                     break;
                 case "DOWNLOAD":
                     downloadFile(channel, scanner);
@@ -112,15 +112,20 @@ public class Client {
         FileChannel fileChannel = fileOutputStream.getChannel();
         ByteBuffer fileContent = ByteBuffer.allocate(1024);
 
-        while(channel.read(fileContent) >=0){
-            fileContent.flip();
-            fileChannel.write(fileContent);
-            fileContent.clear();
+        int bytesRead;
+
+        // Read the file content from the channel
+        while ((bytesRead = channel.read(fileContent)) > 0) {
+            fileContent.flip(); // Prepare the buffer for writing
+            fileChannel.write(fileContent); // Write to the file channel
+            fileContent.clear(); // Clear the buffer for the next read
         }
-        fileOutputStream.close();
+        if(bytesRead == -1){
+            System.out.println("Download completed");
+        }
     }
 
-    private static void renameFiles(SocketChannel channel, Scanner scanner) throws IOException {
+    private static void renameFile(SocketChannel channel, Scanner scanner) throws IOException {
         System.out.println("Enter the old file name (including path):");
         String oldFileName = scanner.nextLine();
 
