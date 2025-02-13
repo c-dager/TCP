@@ -1,9 +1,11 @@
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
+import java.nio.file.Files;
 import java.util.Scanner;
 
 public class Client {
@@ -16,7 +18,7 @@ public class Client {
         int serverPort = Integer.parseInt(args[1]);
         Scanner scanner = new Scanner(System.in);
         loop: while(true){
-            System.out.println("Type the action you'd like to take: List, Delete, Rename, Download, or Upload. You can also type Q to quit\n Command: ");
+            System.out.println("Type the action you'd like to take:\nList\nDelete\nRename\nDownload\nUpload\nYou can also type Q to quit.\nAction: ");
             String action = scanner.nextLine().toUpperCase();
             SocketChannel channel = SocketChannel.open();
             channel.connect(new InetSocketAddress(args[0], serverPort));
@@ -35,11 +37,13 @@ public class Client {
                     downloadFile(channel, scanner);
                     break;
                 case "UPLOAD":
-                    uploadFile();
+                    uploadFile(channel, scanner);
                     break;
                 case "Q":
                     quit(channel);
                     break loop;
+                default:
+                    System.out.println("Invalid command, try again");
             }
         }
 
@@ -49,7 +53,34 @@ public class Client {
         channel.close();
     }
 
-    private static void uploadFile() {
+    private static void uploadFile(SocketChannel channel, Scanner scanner) throws IOException {
+        System.out.println("Enter the file name to be uploaded (including path):");
+        String filePath = scanner.nextLine();
+        File file = new File(filePath);
+
+        if (!file.exists() || !file.isFile()) {
+            System.err.println("File does not exist or is not a valid file.");
+            return;
+        }
+
+        String fileName = file.getName();
+        String request = "UPLOAD|" + fileName;
+
+        // Send the request header
+        ByteBuffer headerBuffer = ByteBuffer.wrap(request.getBytes());
+        channel.write(headerBuffer);
+
+        // Read the file contents
+        byte[] fileContent = Files.readAllBytes(file.toPath());
+        ByteBuffer contentBuffer = ByteBuffer.wrap(fileContent);
+
+        // Send the file contents
+        while (contentBuffer.hasRemaining()) {
+            channel.write(contentBuffer);
+        }
+
+        System.out.println("File upload complete.");
+
     }
 
     private static void downloadFile(SocketChannel channel, Scanner scanner) throws IOException {
