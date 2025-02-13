@@ -46,7 +46,7 @@ public class Client {
                     System.out.println("Invalid command, try again");
             }
         }
-
+        scanner.close();
     }
 
     private static void quit(SocketChannel channel) throws IOException {
@@ -102,26 +102,37 @@ public class Client {
     }
 
     private static void downloadFile(SocketChannel channel, Scanner scanner) throws IOException {
-        System.out.println("Enter the file name to be downloaded");
-        String fileName =  scanner.nextLine();
+        System.out.println("Enter the file name to be downloaded:");
+        String fileName = scanner.nextLine();
         String request = "DOWNLOAD|" + fileName;
-        ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBytes());
-        channel.write(byteBuffer);
-        //request to close channel from client to server direction
-        FileOutputStream fileOutputStream = new FileOutputStream("ClientFiles/" + fileName, true);
-        FileChannel fileChannel = fileOutputStream.getChannel();
-        ByteBuffer fileContent = ByteBuffer.allocate(1024);
+        ByteBuffer requestBuffer = ByteBuffer.wrap(request.getBytes());
+        channel.write(requestBuffer);
 
-        int bytesRead;
+        // Create the output file stream and channel
+        try (FileOutputStream fileOutputStream = new FileOutputStream("ClientFiles/" + fileName);
+             FileChannel fileChannel = fileOutputStream.getChannel()) {
 
-        // Read the file content from the channel
-        while ((bytesRead = channel.read(fileContent)) > 0) {
-            fileContent.flip(); // Prepare the buffer for writing
-            fileChannel.write(fileContent); // Write to the file channel
-            fileContent.clear(); // Clear the buffer for the next read
-        }
-        if(bytesRead == -1){
-            System.out.println("Download completed");
+            ByteBuffer fileContent = ByteBuffer.allocate(1024); // Increased buffer size for efficiency
+            int bytesRead;
+
+            System.out.println("Downloading file...");
+
+            // Read the file content from the channel
+            while ((bytesRead = channel.read(fileContent)) > 0) {
+                fileContent.flip(); // Prepare the buffer for writing
+                fileChannel.write(fileContent); // Write to the file channel
+                fileContent.clear(); // Clear the buffer for the next read
+            }
+
+            if (bytesRead == -1) {
+                System.out.println("Download completed.");
+            } else {
+                System.out.println("Download completed, but not all data was read.");
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error during file download: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

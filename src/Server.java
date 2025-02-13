@@ -89,25 +89,38 @@ public class Server {
         System.out.println("File name message: " + fileName);
 
         File file = new File("ServerFiles/" + fileName);
-        if(!file.exists()){
+        if (!file.exists()) {
             System.out.println("File doesn't exist");
+            return; // Exit the method if the file doesn't exist
         }
-        else{
-            FileInputStream fileInputStream = new FileInputStream(file);
-            FileChannel fileChannel = fileInputStream.getChannel();
+
+        try (FileInputStream fileInputStream = new FileInputStream(file);
+             FileChannel fileChannel = fileInputStream.getChannel()) {
+
             ByteBuffer fileContent = ByteBuffer.allocate(1024);
+            int bytesRead;
 
-            int byteRead = 0;
-            do {
-                byteRead = fileChannel.read(fileContent);
-                fileContent.flip();
-                serveChannel.write(fileContent);
-                fileContent.clear();
-            }while (byteRead >=0);
+            // Read the file content and send it to the client
+            while ((bytesRead = fileChannel.read(fileContent)) > 0) {
+                fileContent.flip(); // Prepare the buffer for writing
+                while (fileContent.hasRemaining()) {
+                    serveChannel.write(fileContent); // Write to the socket channel
+                }
+                fileContent.clear(); // Clear the buffer for the next read
+            }
 
-            fileInputStream.close();
-            serveChannel.close();
+            // Check if we reached the end of the file
+            if (bytesRead == -1) {
+                System.out.println("End of file reached, upload completed.");
+            } else {
+                System.out.println("File upload completed, but not all data was read.");
+            }
+            serveChannel.shutdownOutput();
 
+
+        } catch (IOException e) {
+            System.err.println("Error during file upload: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
