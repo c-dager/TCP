@@ -75,18 +75,22 @@ public class Server {
             System.out.println("File doesn't exist");
             return; // Exit the method if the file doesn't exist
         }
-
+        System.out.println(file.toPath());
         try (FileInputStream fileInputStream = new FileInputStream(file);
              FileChannel fileChannel = fileInputStream.getChannel()) {
-
+            System.out.println("MADE THRU TRY STATEMENT");
             ByteBuffer fileContent = ByteBuffer.allocate(1024);
             int bytesRead;
-
             // Read the file content and send it to the client
             while ((bytesRead = fileChannel.read(fileContent)) > 0) {
                 fileContent.flip(); // Prepare the buffer for writing
                 while (fileContent.hasRemaining()) {
-                    serveChannel.write(fileContent); // Write to the socket channel
+                    System.out.println("Begin write");
+                    int written = serveChannel.write(fileContent); // Write to the socket channel
+                    if(written == 0){
+                        System.out.println("Channel not ready for writing, waiting");
+                    }
+                    System.out.println("End write");
                 }
                 fileContent.clear(); // Clear the buffer for the next read
             }

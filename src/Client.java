@@ -118,17 +118,20 @@ public class Client {
             System.out.println("Downloading file...");
 
             // Read the file content from the channel
-            while ((bytesRead = channel.read(fileContent)) > 0) {
-                fileContent.flip(); // Prepare the buffer for writing
-                fileChannel.write(fileContent); // Write to the file channel
-                fileContent.clear(); // Clear the buffer for the next read
+            while (true) {
+                bytesRead = channel.read(fileContent);
+                if (bytesRead == -1) {
+                    System.out.println("End of stream reached, download completed.");
+                    break; // Exit the loop if the end of the stream is reached
+                } else if (bytesRead > 0) {
+                    fileContent.flip(); // Prepare the buffer for writing
+                    while (fileContent.hasRemaining()) {
+                        fileChannel.write(fileContent); // Write to the file channel
+                    }
+                    fileContent.clear(); // Clear the buffer for the next read
+                }
             }
 
-            if (bytesRead == -1) {
-                System.out.println("Download completed.");
-            } else {
-                System.out.println("Download completed, but not all data was read.");
-            }
 
         } catch (IOException e) {
             System.err.println("Error during file download: " + e.getMessage());
