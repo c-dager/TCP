@@ -92,7 +92,6 @@ public class Server {
     }
 
 
-    //TODO: ALLOW THIS TO BE CALLED TWICE IN A ROW
     private static void uploadFileToClient(SocketChannel serveChannel, String fileName) throws IOException {
         System.out.println("File name message: " + fileName);
 
