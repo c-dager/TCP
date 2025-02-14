@@ -37,8 +37,27 @@ public class Server {
 
     }
 
-    private static void deleteFile() {
+    private static void deleteFile(SocketChannel channel, String fileName) throws IOException {
+        Path filePath = Paths.get("ServerFiles", fileName);
+        System.out.println(filePath.getFileName());
 
+        // Attempt to delete the file
+        try {
+            boolean deleted = Files.deleteIfExists(filePath);
+            // Prepare the response
+            ByteBuffer responseBuffer;
+            if (deleted) {
+                responseBuffer = ByteBuffer.wrap("S".getBytes()); // Success
+            } else {
+                responseBuffer = ByteBuffer.wrap("F".getBytes()); // Failure
+            }
+            channel.write(responseBuffer);
+        } catch (IOException e) {
+            // Handle any exceptions during file deletion
+            e.printStackTrace();
+            ByteBuffer responseBuffer = ByteBuffer.wrap("F".getBytes()); // Failure
+            channel.write(responseBuffer);
+        }
     }
 
     private static void listFiles(SocketChannel clientChannel) throws IOException {
@@ -133,7 +152,7 @@ public class Server {
                         listFiles(serveChannel);
                         break;
                     case "DELETE":
-                        deleteFile();
+                        deleteFile(serveChannel, clientRequestList[1]);
                         break;
                     case "RENAME":
                         renameFile();
