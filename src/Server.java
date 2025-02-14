@@ -120,8 +120,7 @@ public class Server {
             } else {
                 System.out.println("File upload completed, but not all data was read.");
             }
-            serveChannel.shutdownOutput();
-
+            serveChannel.close();
 
         } catch (IOException e) {
             System.err.println("Error during file upload: " + e.getMessage());
@@ -132,12 +131,11 @@ public class Server {
     private static void handleClientRequests(SocketChannel serveChannel) {
         try {
             ByteBuffer buffer = ByteBuffer.allocate(1024);
-            while (true) {
                 int bytesRead = serveChannel.read(buffer);
 
                 if (bytesRead == -1) {
                     System.out.println("Client disconnected.");
-                    break; // Exit the loop if the client disconnects
+                    return; // Exit the loop if the client disconnects
                 }
 
                 buffer.flip();
@@ -169,7 +167,7 @@ public class Server {
 
                 // Clear the buffer for the next read
                 buffer.clear();
-            }
+
         } catch (IOException e) {
             e.printStackTrace();
         } finally {

@@ -17,9 +17,11 @@ public class Client {
 
         int serverPort = Integer.parseInt(args[1]);
         Scanner scanner = new Scanner(System.in);
-        SocketChannel channel = SocketChannel.open();
-        channel.connect(new InetSocketAddress(args[0], serverPort));
+       // SocketChannel channel = SocketChannel.open();
+        //channel.connect(new InetSocketAddress(args[0], serverPort));
         loop: while(true){
+            SocketChannel channel = SocketChannel.open();
+            channel.connect(new InetSocketAddress(args[0], serverPort));
             System.out.println("Type the action you'd like to take:\nList\nDelete\nRename\nDownload\nUpload\nYou can also type Q to quit.\nAction: ");
             String action = scanner.nextLine().toUpperCase();
 
@@ -45,8 +47,10 @@ public class Client {
                 default:
                     System.out.println("Invalid command, try again");
             }
+            channel.close();
         }
         scanner.close();
+
     }
 
     private static void quit(SocketChannel channel) throws IOException {
@@ -107,7 +111,7 @@ public class Client {
         String request = "DOWNLOAD|" + fileName;
         ByteBuffer requestBuffer = ByteBuffer.wrap(request.getBytes());
         channel.write(requestBuffer);
-
+        channel.shutdownOutput();
         // Create the output file stream and channel
         try (FileOutputStream fileOutputStream = new FileOutputStream("ClientFiles/" + fileName);
              FileChannel fileChannel = fileOutputStream.getChannel()) {
@@ -131,6 +135,7 @@ public class Client {
                     fileContent.clear(); // Clear the buffer for the next read
                 }
             }
+            channel.close();
 
 
         } catch (IOException e) {
