@@ -112,7 +112,7 @@ public class Client {
         try (FileOutputStream fileOutputStream = new FileOutputStream("ClientFiles/" + fileName);
              FileChannel fileChannel = fileOutputStream.getChannel()) {
 
-            ByteBuffer fileContent = ByteBuffer.allocate(1024); // Increased buffer size for efficiency
+            ByteBuffer fileContent = ByteBuffer.allocate(1024);
             int bytesRead;
 
             System.out.println("Downloading file...");
@@ -212,7 +212,6 @@ public class Client {
         String request = "LIST";
         ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBytes());
         channel.write(byteBuffer);
-
         // Read the response from the server
         ByteBuffer responseBuffer = ByteBuffer.allocate(1024);
         while (channel.read(responseBuffer) >= 0) {
