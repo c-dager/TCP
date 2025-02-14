@@ -22,7 +22,7 @@ public class Client {
         loop: while(true){
             SocketChannel channel = SocketChannel.open();
             channel.connect(new InetSocketAddress(args[0], serverPort));
-            System.out.println("Type the action you'd like to take:\nList\nDelete\nRename\nDownload\nUpload\nYou can also type Q to quit.\nAction: ");
+            System.out.println("Type the action you'd like to take:\n>List\n>Delete\n>Rename\n>Download\n>Upload\nYou can also type Q to quit.\nAction: ");
             String action = scanner.nextLine().toUpperCase();
 
             switch(action){
@@ -145,10 +145,10 @@ public class Client {
     }
 
     private static void renameFile(SocketChannel channel, Scanner scanner) throws IOException {
-        System.out.println("Enter the old file name (including path):");
+        System.out.println("Enter the old file name:");
         String oldFileName = scanner.nextLine();
 
-        System.out.println("Enter the new file name (including path):");
+        System.out.println("Enter the new file name:");
         String newFileName = scanner.nextLine();
 
         // Construct the request header
@@ -158,7 +158,6 @@ public class Client {
             ByteBuffer headerBuffer = ByteBuffer.wrap(request.getBytes());
             channel.write(headerBuffer);
 
-            System.out.println("Rename request sent");
 
         // Prepare to read the server's response
         ByteBuffer responseBuffer = ByteBuffer.allocate(2); // Assuming response is a single character
@@ -233,6 +232,7 @@ public class Client {
                 for (String file : files) {
                     System.out.println(file.trim());
                 }
+                System.out.println();
                 break;
             }
             else{

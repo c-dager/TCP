@@ -35,13 +35,25 @@ public class Server {
     }
 
     private static void renameFile(SocketChannel channel, String fileName, String newFileName) throws IOException {
-        Path filePath = Paths.get("ServerFiles", fileName);
-        System.out.println(filePath.getFileName());
 
-        File file = new File(fileName);
-        File file2 = new File(newFileName);
+        File orignalFile = new File("ServerFiles", fileName);
+        File newFile = new File("ServerFiles",newFileName);
+        if (newFile.exists()) {
+            System.out.println("Failed to find file");
+            ByteBuffer responseBuffer = ByteBuffer.wrap("F".getBytes());
+            channel.write(responseBuffer);// Failure
+            return;
+        }
+        System.out.println("Renaming file from " + orignalFile.getName() + " to " + newFile.getName());
+        boolean renamed = orignalFile.renameTo(newFile);
+        ByteBuffer responseBuffer;
+        if (renamed) {
+            responseBuffer = ByteBuffer.wrap("S".getBytes()); // Success
+        } else {
+            responseBuffer = ByteBuffer.wrap("F".getBytes()); // Failure
+        }
+        channel.write(responseBuffer);
 
-        boolean renamed = file.renameTo(file2);
     }
 
     private static void deleteFile(SocketChannel channel, String fileName) throws IOException {
@@ -103,19 +115,16 @@ public class Server {
         System.out.println(file.toPath());
         try (FileInputStream fileInputStream = new FileInputStream(file);
              FileChannel fileChannel = fileInputStream.getChannel()) {
-            System.out.println("MADE THRU TRY STATEMENT");
             ByteBuffer fileContent = ByteBuffer.allocate(1024);
             int bytesRead;
             // Read the file content and send it to the client
             while ((bytesRead = fileChannel.read(fileContent)) > 0) {
                 fileContent.flip(); // Prepare the buffer for writing
                 while (fileContent.hasRemaining()) {
-                    System.out.println("Begin write");
                     int written = serveChannel.write(fileContent); // Write to the socket channel
                     if(written == 0){
                         System.out.println("Channel not ready for writing, waiting");
                     }
-                    System.out.println("End write");
                 }
                 fileContent.clear(); // Clear the buffer for the next read
             }
