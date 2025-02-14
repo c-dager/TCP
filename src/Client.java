@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -60,7 +61,7 @@ public class Client {
     private static void uploadFile(SocketChannel channel, Scanner scanner) throws IOException {
         System.out.println("Enter the file name to be uploaded:");
         String filePath = scanner.nextLine();
-        File file = new File(filePath);
+        File file = new File("ClientFiles", filePath);
 
         if (!file.exists() || !file.isFile()) {
             System.err.println("File does not exist or is not a valid file.");
@@ -74,17 +75,40 @@ public class Client {
         ByteBuffer headerBuffer = ByteBuffer.wrap(request.getBytes());
         channel.write(headerBuffer);
 
-        // Read the file contents
-        byte[] fileContent = Files.readAllBytes(file.toPath());
-        ByteBuffer contentBuffer = ByteBuffer.wrap(fileContent);
-
         // Send the file contents
-        while (contentBuffer.hasRemaining()) {
-            channel.write(contentBuffer);
+        try (FileInputStream fileInputStream = new FileInputStream(file);
+             FileChannel fileChannel = fileInputStream.getChannel()) {
+            ByteBuffer fileContent = ByteBuffer.allocate(1024);
+            int bytesRead;
+            // Read the file content and send it to the client
+            while ((bytesRead = fileChannel.read(fileContent)) > 0) {
+                fileContent.flip(); // Prepare the buffer for writing
+                while (fileContent.hasRemaining()) {
+                    int written = channel.write(fileContent); // Write to the socket channel
+                    if(written == 0){
+                        System.out.println("Channel not ready for writing, waiting");
+                    }
+                }
+                fileContent.clear(); // Clear the buffer for the next read
+            }
+
+            // Check if we reached the end of the file
+            if (bytesRead == -1) {
+                System.out.println("End of file reached, upload completed.");
+            } else {
+                System.out.println("File upload completed, but not all data was read.");
+            }
+            channel.close();
+
+        } catch (IOException e) {
+            System.err.println("Error during file upload: " + e.getMessage());
+            e.printStackTrace();
         }
 
+        //FIXME: BROKEN
+        /*
         // Prepare to read the server's response
-        ByteBuffer responseBuffer = ByteBuffer.allocate(2); // Assuming response is a single character
+        ByteBuffer responseBuffer = ByteBuffer.allocate(1); // Assuming response is a single character
         int bytesRead = channel.read(responseBuffer);
 
         if (bytesRead > 0) {
@@ -102,6 +126,8 @@ public class Client {
         } else {
             System.out.println("No response received from server.");
         }
+
+         */
 
     }
 

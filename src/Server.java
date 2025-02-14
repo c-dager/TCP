@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -30,8 +31,40 @@ public class Server {
         }
     }
 
-    private static void downloadFileFromClient() {
+    private static void downloadFileFromClient(SocketChannel channel, String fileName) throws IOException {
+        try (FileOutputStream fileOutputStream = new FileOutputStream("ServerFiles/" + fileName);
+             FileChannel fileChannel = fileOutputStream.getChannel()) {
+            ByteBuffer responseBuffer = ByteBuffer.allocate(1); // Buffer for response
+            ByteBuffer fileContent = ByteBuffer.allocate(1024);
+            int bytesRead;
 
+            System.out.println("Downloading file...");
+
+            // Read the file content from the channel
+            while (true) {
+                bytesRead = channel.read(fileContent);
+                if (bytesRead == -1) {
+                    System.out.println("End of stream reached, download completed.");
+                    responseBuffer.put("S".getBytes());
+                    responseBuffer.flip();
+                    channel.write(responseBuffer);
+                    break; // Exit the loop if the end of the stream is reached
+                } else if (bytesRead > 0) {
+                    fileContent.flip(); // Prepare the buffer for writing
+                    while (fileContent.hasRemaining()) {
+                        fileChannel.write(fileContent); // Write to the file channel
+                    }
+                    fileContent.clear(); // Clear the buffer for the next read
+                }
+            }
+
+
+        } catch (IOException e) {
+            System.err.println("Error during file download: " + e.getMessage());
+            e.printStackTrace();
+            ByteBuffer responseBuffer = ByteBuffer.wrap("F".getBytes());
+            channel.write(responseBuffer);
+        }
     }
 
     private static void renameFile(SocketChannel channel, String fileName, String newFileName) throws IOException {
@@ -174,7 +207,7 @@ public class Server {
                         uploadFileToClient(serveChannel, clientRequestList[1]);
                         break;
                     case "UPLOAD":
-                        downloadFileFromClient();
+                        downloadFileFromClient(serveChannel, clientRequestList[1]);
                         break;
                     default:
                         System.out.println("Invalid command, try again");
