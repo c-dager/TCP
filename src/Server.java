@@ -31,10 +31,17 @@ public class Server {
     }
 
     private static void downloadFileFromClient() {
+
     }
 
-    private static void renameFile() {
+    private static void renameFile(SocketChannel channel, String fileName, String newFileName) throws IOException {
+        Path filePath = Paths.get("ServerFiles", fileName);
+        System.out.println(filePath.getFileName());
 
+        File file = new File(fileName);
+        File file2 = new File(newFileName);
+
+        boolean renamed = file.renameTo(file2);
     }
 
     private static void deleteFile(SocketChannel channel, String fileName) throws IOException {
@@ -153,7 +160,7 @@ public class Server {
                         deleteFile(serveChannel, clientRequestList[1]);
                         break;
                     case "RENAME":
-                        renameFile();
+                        renameFile(serveChannel, clientRequestList[1], clientRequestList[2]);
                         break;
                     case "DOWNLOAD":
                         uploadFileToClient(serveChannel, clientRequestList[1]);
