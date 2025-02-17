@@ -1,3 +1,4 @@
+import javax.print.DocFlavor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -172,7 +173,7 @@ public class Client {
             // Send the request header
             ByteBuffer headerBuffer = ByteBuffer.wrap(request.getBytes());
             channel.write(headerBuffer);
-
+            channel.shutdownOutput();
 
         // Prepare to read the server's response
         ByteBuffer responseBuffer = ByteBuffer.allocate(2); // Assuming response is a single character
@@ -206,6 +207,7 @@ public class Client {
         // Send the request header
         ByteBuffer headerBuffer = ByteBuffer.wrap(request.getBytes());
         channel.write(headerBuffer);
+        channel.shutdownOutput();
 
         System.out.println("Delete request sent: " + request);
 
@@ -235,6 +237,7 @@ public class Client {
         String request = "LIST";
         ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBytes());
         channel.write(byteBuffer);
+        channel.shutdownOutput();
         // Read the response from the server
         ByteBuffer responseBuffer = ByteBuffer.allocate(1024);
         while (channel.read(responseBuffer) >= 0) {
