@@ -78,37 +78,26 @@ public class Client {
         // Send the file contents
         try (FileInputStream fileInputStream = new FileInputStream(file);
              FileChannel fileChannel = fileInputStream.getChannel()) {
-            ByteBuffer fileContent = ByteBuffer.allocate(1024);
+            ByteBuffer fileBuffer = ByteBuffer.allocate(1024);
             int bytesRead;
             // Read the file content and send it to the client
-            while ((bytesRead = fileChannel.read(fileContent)) > 0) {
-                fileContent.flip(); // Prepare the buffer for writing
-                while (fileContent.hasRemaining()) {
-                    int written = channel.write(fileContent); // Write to the socket channel
-                    if(written == 0){
-                        System.out.println("Channel not ready for writing, waiting");
-                    }
-                }
-                fileContent.clear(); // Clear the buffer for the next read
+            while (fileChannel.read(fileBuffer) > 0){
+                fileBuffer.flip();
+                channel.write(fileBuffer);
+                fileBuffer.clear();
             }
+            channel.shutdownOutput();
+            fileChannel.close();
+            fileInputStream.close();
 
-            // Check if we reached the end of the file
-            if (bytesRead == -1) {
-                System.out.println("End of file reached, upload completed.");
-            } else {
-                System.out.println("File upload completed, but not all data was read.");
-            }
-            channel.close();
 
         } catch (IOException e) {
             System.err.println("Error during file upload: " + e.getMessage());
             e.printStackTrace();
         }
 
-        //FIXME: BROKEN
-        /*
         // Prepare to read the server's response
-        ByteBuffer responseBuffer = ByteBuffer.allocate(1); // Assuming response is a single character
+        ByteBuffer responseBuffer = ByteBuffer.allocate(10); // Assuming response is a single character
         int bytesRead = channel.read(responseBuffer);
 
         if (bytesRead > 0) {
@@ -127,7 +116,7 @@ public class Client {
             System.out.println("No response received from server.");
         }
 
-         */
+
 
     }
 
@@ -204,6 +193,7 @@ public class Client {
         } else {
             System.out.println("No response received from server.");
         }
+        channel.close();
 
     }
 

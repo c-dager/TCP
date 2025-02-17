@@ -32,39 +32,29 @@ public class Server {
     }
 
     private static void downloadFileFromClient(SocketChannel channel, String fileName) throws IOException {
-        try (FileOutputStream fileOutputStream = new FileOutputStream("ServerFiles/" + fileName);
-             FileChannel fileChannel = fileOutputStream.getChannel()) {
-            ByteBuffer responseBuffer = ByteBuffer.allocate(1); // Buffer for response
-            ByteBuffer fileContent = ByteBuffer.allocate(1024);
-            int bytesRead;
+       FileOutputStream fileOutputStream = new FileOutputStream("ServerFiles/" + fileName);
+       FileChannel fileChannel = fileOutputStream.getChannel();
+       ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+       String response;
 
-            System.out.println("Downloading file...");
-
-            // Read the file content from the channel
-            while (true) {
-                bytesRead = channel.read(fileContent);
-                if (bytesRead == -1) {
-                    System.out.println("End of stream reached, download completed.");
-                    responseBuffer.put("S".getBytes());
-                    responseBuffer.flip();
-                    channel.write(responseBuffer);
-                    break; // Exit the loop if the end of the stream is reached
-                } else if (bytesRead > 0) {
-                    fileContent.flip(); // Prepare the buffer for writing
-                    while (fileContent.hasRemaining()) {
-                        fileChannel.write(fileContent); // Write to the file channel
-                    }
-                    fileContent.clear(); // Clear the buffer for the next read
-                }
-            }
-
-
-        } catch (IOException e) {
-            System.err.println("Error during file download: " + e.getMessage());
-            e.printStackTrace();
-            ByteBuffer responseBuffer = ByteBuffer.wrap("F".getBytes());
-            channel.write(responseBuffer);
-        }
+       try{
+           while (channel.read(byteBuffer) > 0){
+               byteBuffer.flip();
+               fileChannel.write(byteBuffer);
+               byteBuffer.clear();
+           }
+           fileOutputStream.close();
+           response = "S";
+           ByteBuffer responseBuffer = ByteBuffer.wrap(response.getBytes());
+           channel.write(responseBuffer);
+           channel.close();
+       }
+       catch (Exception e){
+           response = "F";
+           ByteBuffer responseBuffer = ByteBuffer.wrap(response.getBytes());
+           channel.write(responseBuffer);
+           byteBuffer.clear();
+       }
     }
 
     private static void renameFile(SocketChannel channel, String fileName, String newFileName) throws IOException {
