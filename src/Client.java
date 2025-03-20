@@ -9,9 +9,12 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.file.Files;
 import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Client {
     public static void main(String[] args) throws Exception {
+        ExecutorService es = Executors.newFixedThreadPool(4);
         if(args.length != 2){
             System.out.println("Please provide <serverIP> and <serverPort>");
             return;
@@ -38,10 +41,12 @@ public class Client {
                     renameFile(channel, scanner);
                     break;
                 case "DOWNLOAD":
-                    downloadFile(channel, scanner);
+                    es.submit(new downloadTask(channel, scanner));
+                    // downloadFile(channel, scanner);
                     break;
                 case "UPLOAD":
-                    uploadFile(channel, scanner);
+                    es.submit(new uploadTask(channel, scanner));
+                    // uploadFile(channel, scanner);
                     break;
                 case "Q":
                     quit(channel);
@@ -121,6 +126,22 @@ public class Client {
 
     }
 
+    static class uploadTask implements Runnable{
+        private SocketChannel channel;
+        private Scanner scanner;
+        public uploadTask(SocketChannel channel, Scanner scanner) {
+            this.channel = channel;
+            this.scanner = scanner;
+        }
+        public void run() {
+            try {
+                uploadFile(channel, scanner);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     private static void downloadFile(SocketChannel channel, Scanner scanner) throws IOException {
         System.out.println("Enter the file name to be downloaded:");
         String fileName = scanner.nextLine();
@@ -157,6 +178,22 @@ public class Client {
         } catch (IOException e) {
             System.err.println("Error during file download: " + e.getMessage());
             e.printStackTrace();
+        }
+    }
+
+    static class downloadTask implements Runnable{
+        private SocketChannel channel;
+        private Scanner scanner;
+        public downloadTask(SocketChannel channel, Scanner scanner) {
+            this.channel = channel;
+            this.scanner = scanner;
+        }
+        public void run() {
+            try {
+                downloadFile(channel, scanner);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
