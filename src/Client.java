@@ -42,11 +42,11 @@ public class Client {
                     break;
                 case "DOWNLOAD":
                     es.submit(new downloadTask(channel, scanner));
-                    // downloadFile(channel, scanner);
+                    //downloadFile(channel, scanner);
                     break;
                 case "UPLOAD":
-                    es.submit(new uploadTask(channel, scanner));
-                    // uploadFile(channel, scanner);
+                    //es.submit(new uploadTask(channel, scanner));
+                    uploadFile(channel, scanner);
                     break;
                 case "Q":
                     quit(channel);
@@ -57,7 +57,7 @@ public class Client {
             channel.close();
         }
         scanner.close();
-
+        es.shutdown();
     }
 
     private static void quit(SocketChannel channel) throws IOException {
