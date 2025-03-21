@@ -11,21 +11,27 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Scanner;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server {
     public static void main(String[] args) throws Exception {
         try (ServerSocketChannel listenChannel = ServerSocketChannel.open()) {
             listenChannel.bind(new InetSocketAddress(3000));
             System.out.println("Server is listening on port 3000...");
-
-            while (true) {
+            ExecutorService es = Executors.newFixedThreadPool(4);
+            String input = "";
+            Scanner scanner = new Scanner(System.in);
+            while (!input.toLowerCase().equals("q")) {
                 System.out.println("Waiting for client connection...");
                 SocketChannel serveChannel = listenChannel.accept();
                 System.out.println("Client connected: " + serveChannel.getRemoteAddress());
 
                 // Handle client requests in a separate method
-                handleClientRequests(serveChannel);
+                handleClientRequests(serveChannel, es);
             }
+            es.shutdown();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -57,6 +63,22 @@ public class Server {
        }
     }
 
+    static class downloadFileFromClientTask implements Runnable{
+        private String fileName;
+        private SocketChannel channel;
+        public downloadFileFromClientTask(SocketChannel channel, String fileName){
+            this.channel = channel;
+            this.fileName = fileName;
+        }
+        public void run(){
+            try {
+                downloadFileFromClient(channel, fileName);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     private static void renameFile(SocketChannel channel, String fileName, String newFileName) throws IOException {
 
         File orignalFile = new File("ServerFiles", fileName);
@@ -77,6 +99,24 @@ public class Server {
         }
         channel.write(responseBuffer);
 
+    }
+
+    static class renameFileTask implements Runnable{
+        private String oldFileName;
+        private String newFileName;
+        private SocketChannel channel;
+        public renameFileTask(SocketChannel channel, String oldFileName, String newFileName){
+            this.channel = channel;
+            this.oldFileName = oldFileName;
+            this.newFileName = newFileName;
+        }
+        public void run(){
+            try {
+                renameFile(channel, oldFileName, newFileName);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static void deleteFile(SocketChannel channel, String fileName) throws IOException {
@@ -102,6 +142,22 @@ public class Server {
         }
     }
 
+    static class deleteFileTask implements Runnable{
+        private String fileName;
+        private SocketChannel channel;
+        public deleteFileTask(SocketChannel channel, String fileName){
+            this.channel = channel;
+            this.fileName = fileName;
+        }
+        public void run(){
+            try {
+                deleteFile(channel, fileName);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     private static void listFiles(SocketChannel clientChannel) throws IOException {
         System.out.println("Requesting file list...");
 
@@ -124,6 +180,19 @@ public class Server {
         ByteBuffer responseBuffer = ByteBuffer.wrap(response.toString().getBytes());
         clientChannel.write(responseBuffer);
         System.out.println("Sent file list to client: " + response);
+    }
+    static class listFilesTask implements Runnable{
+        private SocketChannel channel;
+        public listFilesTask(SocketChannel channel){
+            this.channel = channel;
+        }
+        public void run(){
+            try {
+                listFiles(channel);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
 
@@ -166,7 +235,23 @@ public class Server {
         }
     }
 
-    private static void handleClientRequests(SocketChannel serveChannel) {
+    static class uploadFileToClientTask implements Runnable{
+        private String fileName;
+        private SocketChannel channel;
+        public uploadFileToClientTask(SocketChannel channel, String fileName){
+            this.channel = channel;
+            this.fileName = fileName;
+        }
+        public void run(){
+            try {
+                uploadFileToClient(channel, fileName);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private static void handleClientRequests(SocketChannel serveChannel, ExecutorService es) {
         try {
             ByteBuffer buffer = ByteBuffer.allocate(1024);
                 int bytesRead = serveChannel.read(buffer);
@@ -185,19 +270,24 @@ public class Server {
 
                 switch (action) {
                     case "LIST":
-                        listFiles(serveChannel);
+                        //listFiles(serveChannel);
+                        es.submit(new listFilesTask(serveChannel));
                         break;
                     case "DELETE":
                         deleteFile(serveChannel, clientRequestList[1]);
+                        es.submit(new deleteFileTask(serveChannel, clientRequestList[1]));
                         break;
                     case "RENAME":
-                        renameFile(serveChannel, clientRequestList[1], clientRequestList[2]);
+                        //renameFile(serveChannel, clientRequestList[1], clientRequestList[2]);
+                        es.submit(new renameFileTask(serveChannel, clientRequestList[1], clientRequestList[2]));
                         break;
                     case "DOWNLOAD":
-                        uploadFileToClient(serveChannel, clientRequestList[1]);
+                        //uploadFileToClient(serveChannel, clientRequestList[1]);
+                        es.submit(new uploadFileToClientTask(serveChannel, clientRequestList[1]));
                         break;
                     case "UPLOAD":
-                        downloadFileFromClient(serveChannel, clientRequestList[1]);
+                        //downloadFileFromClient(serveChannel, clientRequestList[1]);
+                        es.submit(new downloadFileFromClientTask(serveChannel, clientRequestList[1]));
                         break;
                     default:
                         System.out.println("Invalid command, try again");

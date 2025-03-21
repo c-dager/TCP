@@ -41,8 +41,8 @@ public class Client {
                     renameFile(channel, scanner);
                     break;
                 case "DOWNLOAD":
-                    es.submit(new downloadTask(channel, scanner));
-                    //downloadFile(channel, scanner);
+                    //es.submit(new downloadTask(channel, scanner));
+                    downloadFile(channel, scanner);
                     break;
                 case "UPLOAD":
                     //es.submit(new uploadTask(channel, scanner));
