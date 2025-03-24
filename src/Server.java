@@ -16,22 +16,54 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
+    private static volatile boolean running = true; // Flag to control the loop
     public static void main(String[] args) throws Exception {
+
         try (ServerSocketChannel listenChannel = ServerSocketChannel.open()) {
             listenChannel.bind(new InetSocketAddress(3000));
             System.out.println("Server is listening on port 3000...");
             ExecutorService es = Executors.newFixedThreadPool(4);
-            String input = "";
+
+            es.submit(() -> {
+                while (listenChannel.isOpen()) {
+                    // Simulate doing some work
+                    try {
+                        System.out.println("Waiting for client connection...");
+                        SocketChannel serveChannel = listenChannel.accept();
+                        System.out.println("Client connected: " + serveChannel.getRemoteAddress());
+
+                        // Handle client requests in a separate method
+                        handleClientRequests(serveChannel, es);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
             Scanner scanner = new Scanner(System.in);
-            while (!input.toLowerCase().equals("q")) {
+            while (running) {
+                String input = scanner.nextLine();
+                if (input.equalsIgnoreCase("q")) {
+                    running = false; // Set the flag to false to stop the worker thread
+                    System.out.println("Exiting the program.");
+                    listenChannel.close();
+                    es.shutdown();
+                    scanner.close();
+                } else {
+                    // Process the input as needed
+                    System.out.println("You entered: " + input);
+                }
+            }
+            /*
+            while (true) {
                 System.out.println("Waiting for client connection...");
                 SocketChannel serveChannel = listenChannel.accept();
                 System.out.println("Client connected: " + serveChannel.getRemoteAddress());
 
                 // Handle client requests in a separate method
                 handleClientRequests(serveChannel, es);
-            }
+            } */
             es.shutdown();
+            scanner.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -292,7 +324,6 @@ public class Server {
                     default:
                         System.out.println("Invalid command, try again");
                 }
-
                 // Clear the buffer for the next read
                 buffer.clear();
 
