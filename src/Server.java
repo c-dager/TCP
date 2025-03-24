@@ -270,16 +270,16 @@ public class Server {
 
                 switch (action) {
                     case "LIST":
-                        //listFiles(serveChannel);
-                        es.submit(new listFilesTask(serveChannel));
+                        listFiles(serveChannel);
+                        //es.submit(new listFilesTask(serveChannel));
                         break;
                     case "DELETE":
                         deleteFile(serveChannel, clientRequestList[1]);
-                        es.submit(new deleteFileTask(serveChannel, clientRequestList[1]));
+                        //es.submit(new deleteFileTask(serveChannel, clientRequestList[1]));
                         break;
                     case "RENAME":
-                        //renameFile(serveChannel, clientRequestList[1], clientRequestList[2]);
-                        es.submit(new renameFileTask(serveChannel, clientRequestList[1], clientRequestList[2]));
+                        renameFile(serveChannel, clientRequestList[1], clientRequestList[2]);
+                        //es.submit(new renameFileTask(serveChannel, clientRequestList[1], clientRequestList[2]));
                         break;
                     case "DOWNLOAD":
                         //uploadFileToClient(serveChannel, clientRequestList[1]);
