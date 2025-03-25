@@ -16,57 +16,59 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Server {
-    private static volatile boolean running = true; // Flag to control the loop
     public static void main(String[] args) throws Exception {
 
         try (ServerSocketChannel listenChannel = ServerSocketChannel.open()) {
             listenChannel.bind(new InetSocketAddress(3000));
             System.out.println("Server is listening on port 3000...");
             ExecutorService es = Executors.newFixedThreadPool(4);
+            Thread inputThread = createQuitThread(listenChannel, es);
+            inputThread.start();
 
-            es.submit(() -> {
-                while (listenChannel.isOpen()) {
-                    // Simulate doing some work
-                    try {
-                        System.out.println("Waiting for client connection...");
-                        SocketChannel serveChannel = listenChannel.accept();
-                        System.out.println("Client connected: " + serveChannel.getRemoteAddress());
-
-                        // Handle client requests in a separate method
-                        handleClientRequests(serveChannel, es);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
+            while (listenChannel.isOpen()) {
+                try {
+                    SocketChannel clientChannel = listenChannel.accept();
+                    if (clientChannel != null) {
+                        es.submit(new handleClientRequestsTask(clientChannel, es));
                     }
-                }
-            });
-            Scanner scanner = new Scanner(System.in);
-            while (running) {
-                String input = scanner.nextLine();
-                if (input.equalsIgnoreCase("q")) {
-                    running = false; // Set the flag to false to stop the worker thread
-                    System.out.println("Exiting the program.");
-                    listenChannel.close();
-                    es.shutdown();
-                    scanner.close();
-                } else {
-                    // Process the input as needed
-                    System.out.println("You entered: " + input);
+                } catch (Exception e) {
+                    if (!listenChannel.isOpen()) {
+                        System.out.println("Server socket closed, stopping server.");
+                        break;
+                    }
+                    e.printStackTrace();
                 }
             }
-            /*
-            while (true) {
-                System.out.println("Waiting for client connection...");
-                SocketChannel serveChannel = listenChannel.accept();
-                System.out.println("Client connected: " + serveChannel.getRemoteAddress());
-
-                // Handle client requests in a separate method
-                handleClientRequests(serveChannel, es);
-            } */
             es.shutdown();
-            scanner.close();
+            System.out.println("Server stopped. ");
+
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+    }
+
+    private static Thread createQuitThread(ServerSocketChannel listenChannel, ExecutorService es) {
+        Scanner scanner = new Scanner(System.in);
+
+        // Start a separate thread to monitor user input for "Q"
+        Thread inputThread = new Thread(() -> {
+            System.out.println("Type Q to stop the server");
+            while (true) {
+                String input = scanner.nextLine();
+                if (input.equalsIgnoreCase("Q")) {
+                    System.out.println("Shutting down the server...");
+                    try {
+                        listenChannel.close();
+                        es.shutdown();
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    break;
+                }
+            }
+        });
+        return inputThread;
     }
 
     private static void downloadFileFromClient(SocketChannel channel, String fileName) throws IOException {
@@ -96,8 +98,8 @@ public class Server {
     }
 
     static class downloadFileFromClientTask implements Runnable{
-        private String fileName;
-        private SocketChannel channel;
+        String fileName;
+        SocketChannel channel;
         public downloadFileFromClientTask(SocketChannel channel, String fileName){
             this.channel = channel;
             this.fileName = fileName;
@@ -133,24 +135,6 @@ public class Server {
 
     }
 
-    static class renameFileTask implements Runnable{
-        private String oldFileName;
-        private String newFileName;
-        private SocketChannel channel;
-        public renameFileTask(SocketChannel channel, String oldFileName, String newFileName){
-            this.channel = channel;
-            this.oldFileName = oldFileName;
-            this.newFileName = newFileName;
-        }
-        public void run(){
-            try {
-                renameFile(channel, oldFileName, newFileName);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
     private static void deleteFile(SocketChannel channel, String fileName) throws IOException {
         Path filePath = Paths.get("ServerFiles", fileName);
         System.out.println(filePath.getFileName());
@@ -171,22 +155,6 @@ public class Server {
             e.printStackTrace();
             ByteBuffer responseBuffer = ByteBuffer.wrap("F".getBytes()); // Failure
             channel.write(responseBuffer);
-        }
-    }
-
-    static class deleteFileTask implements Runnable{
-        private String fileName;
-        private SocketChannel channel;
-        public deleteFileTask(SocketChannel channel, String fileName){
-            this.channel = channel;
-            this.fileName = fileName;
-        }
-        public void run(){
-            try {
-                deleteFile(channel, fileName);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 
@@ -213,20 +181,6 @@ public class Server {
         clientChannel.write(responseBuffer);
         System.out.println("Sent file list to client: " + response);
     }
-    static class listFilesTask implements Runnable{
-        private SocketChannel channel;
-        public listFilesTask(SocketChannel channel){
-            this.channel = channel;
-        }
-        public void run(){
-            try {
-                listFiles(channel);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
-
 
     private static void uploadFileToClient(SocketChannel serveChannel, String fileName) throws IOException {
         System.out.println("File name message: " + fileName);
@@ -268,8 +222,8 @@ public class Server {
     }
 
     static class uploadFileToClientTask implements Runnable{
-        private String fileName;
-        private SocketChannel channel;
+        String fileName;
+        SocketChannel channel;
         public uploadFileToClientTask(SocketChannel channel, String fileName){
             this.channel = channel;
             this.fileName = fileName;
@@ -303,15 +257,12 @@ public class Server {
                 switch (action) {
                     case "LIST":
                         listFiles(serveChannel);
-                        //es.submit(new listFilesTask(serveChannel));
                         break;
                     case "DELETE":
                         deleteFile(serveChannel, clientRequestList[1]);
-                        //es.submit(new deleteFileTask(serveChannel, clientRequestList[1]));
                         break;
                     case "RENAME":
                         renameFile(serveChannel, clientRequestList[1], clientRequestList[2]);
-                        //es.submit(new renameFileTask(serveChannel, clientRequestList[1], clientRequestList[2]));
                         break;
                     case "DOWNLOAD":
                         //uploadFileToClient(serveChannel, clientRequestList[1]);
@@ -324,17 +275,20 @@ public class Server {
                     default:
                         System.out.println("Invalid command, try again");
                 }
-                // Clear the buffer for the next read
-                buffer.clear();
 
         } catch (IOException e) {
             e.printStackTrace();
-        } finally {
-            try {
-                serveChannel.close(); // Ensure the channel is closed when done
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        }
+    }
+    static class handleClientRequestsTask implements Runnable{
+        ExecutorService es;
+        SocketChannel channel;
+        public handleClientRequestsTask(SocketChannel channel, ExecutorService es){
+            this.channel = channel;
+            this.es = es;
+        }
+        public void run(){
+            handleClientRequests(channel, es);
         }
     }
 }

@@ -1,4 +1,4 @@
-import javax.print.DocFlavor;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -7,14 +7,10 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.SocketChannel;
-import java.nio.file.Files;
 import java.util.Scanner;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 public class Client {
     public static void main(String[] args) throws Exception {
-        ExecutorService es = Executors.newFixedThreadPool(4);
         if(args.length != 2){
             System.out.println("Please provide <serverIP> and <serverPort>");
             return;
@@ -22,8 +18,6 @@ public class Client {
 
         int serverPort = Integer.parseInt(args[1]);
         Scanner scanner = new Scanner(System.in);
-       // SocketChannel channel = SocketChannel.open();
-        //channel.connect(new InetSocketAddress(args[0], serverPort));
         loop: while(true){
             SocketChannel channel = SocketChannel.open();
             channel.connect(new InetSocketAddress(args[0], serverPort));
@@ -56,8 +50,6 @@ public class Client {
             }
             channel.close();
         }
-        scanner.close();
-        es.shutdown();
     }
 
     private static void quit(SocketChannel channel) throws IOException {
@@ -84,8 +76,8 @@ public class Client {
         // Send the file contents
         try (FileInputStream fileInputStream = new FileInputStream(file);
              FileChannel fileChannel = fileInputStream.getChannel()) {
+            Thread.sleep(5000);
             ByteBuffer fileBuffer = ByteBuffer.allocate(1024);
-            int bytesRead;
             // Read the file content and send it to the client
             while (fileChannel.read(fileBuffer) > 0){
                 fileBuffer.flip();
@@ -93,13 +85,12 @@ public class Client {
                 fileBuffer.clear();
             }
             channel.shutdownOutput();
-            fileChannel.close();
-            fileInputStream.close();
-
 
         } catch (IOException e) {
             System.err.println("Error during file upload: " + e.getMessage());
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
         // Prepare to read the server's response
@@ -124,22 +115,6 @@ public class Client {
 
 
 
-    }
-
-    static class uploadTask implements Runnable{
-        private SocketChannel channel;
-        private Scanner scanner;
-        public uploadTask(SocketChannel channel, Scanner scanner) {
-            this.channel = channel;
-            this.scanner = scanner;
-        }
-        public void run() {
-            try {
-                uploadFile(channel, scanner);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
     }
 
     private static void downloadFile(SocketChannel channel, Scanner scanner) throws IOException {
@@ -178,22 +153,6 @@ public class Client {
         } catch (IOException e) {
             System.err.println("Error during file download: " + e.getMessage());
             e.printStackTrace();
-        }
-    }
-
-    static class downloadTask implements Runnable{
-        private SocketChannel channel;
-        private Scanner scanner;
-        public downloadTask(SocketChannel channel, Scanner scanner) {
-            this.channel = channel;
-            this.scanner = scanner;
-        }
-        public void run() {
-            try {
-                downloadFile(channel, scanner);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
         }
     }
 
