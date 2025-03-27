@@ -39,6 +39,8 @@ public class Server {
                     e.printStackTrace();
                 }
             }
+            System.out.println("listenchannel is open: " + listenChannel.isOpen());
+            System.out.println("es is shutdown: " + es.isShutdown());
             es.shutdown();
             System.out.println("Server stopped. ");
 
@@ -94,6 +96,7 @@ public class Server {
            ByteBuffer responseBuffer = ByteBuffer.wrap(response.getBytes());
            channel.write(responseBuffer);
            byteBuffer.clear();
+           channel.close();
        }
     }
 
@@ -132,6 +135,7 @@ public class Server {
             responseBuffer = ByteBuffer.wrap("F".getBytes()); // Failure
         }
         channel.write(responseBuffer);
+        channel.close();
 
     }
 
@@ -156,6 +160,7 @@ public class Server {
             ByteBuffer responseBuffer = ByteBuffer.wrap("F".getBytes()); // Failure
             channel.write(responseBuffer);
         }
+        channel.close();
     }
 
     private static void listFiles(SocketChannel clientChannel) throws IOException {
@@ -180,6 +185,7 @@ public class Server {
         ByteBuffer responseBuffer = ByteBuffer.wrap(response.toString().getBytes());
         clientChannel.write(responseBuffer);
         System.out.println("Sent file list to client: " + response);
+        clientChannel.close();
     }
 
     private static void uploadFileToClient(SocketChannel serveChannel, String fileName) throws IOException {
@@ -213,9 +219,12 @@ public class Server {
             } else {
                 System.out.println("File upload completed, but not all data was read.");
             }
+            fileInputStream.close();
+            fileChannel.close();
             serveChannel.close();
 
         } catch (IOException e) {
+
             System.err.println("Error during file upload: " + e.getMessage());
             e.printStackTrace();
         }
@@ -238,8 +247,9 @@ public class Server {
     }
 
     private static void handleClientRequests(SocketChannel serveChannel, ExecutorService es) {
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
         try {
-            ByteBuffer buffer = ByteBuffer.allocate(1024);
+
                 int bytesRead = serveChannel.read(buffer);
 
                 if (bytesRead == -1) {

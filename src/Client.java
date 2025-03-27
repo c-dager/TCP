@@ -17,46 +17,49 @@ public class Client {
         }
 
         int serverPort = Integer.parseInt(args[1]);
+        String serverIP = args[0];
         Scanner scanner = new Scanner(System.in);
         loop: while(true){
-            SocketChannel channel = SocketChannel.open();
-            channel.connect(new InetSocketAddress(args[0], serverPort));
+            //SocketChannel channel = SocketChannel.open();
+            //channel.connect(new InetSocketAddress(serverIP, serverPort));
             System.out.println("Type the action you'd like to take:\n>List\n>Delete\n>Rename\n>Download\n>Upload\nYou can also type Q to quit.\nAction: ");
             String action = scanner.nextLine().toUpperCase();
 
             switch(action){
                 case "LIST":
-                    listFiles(channel);
+                    listFiles(serverIP, serverPort);
                     break;
                 case "DELETE":
-                    deleteFile(channel, scanner);
+                    deleteFile(serverIP, serverPort, scanner);
                     break;
                 case "RENAME":
-                    renameFile(channel, scanner);
+                    renameFile(serverIP, serverPort, scanner);
                     break;
                 case "DOWNLOAD":
                     //es.submit(new downloadTask(channel, scanner));
-                    downloadFile(channel, scanner);
+                    downloadFile(serverIP, serverPort, scanner);
                     break;
                 case "UPLOAD":
                     //es.submit(new uploadTask(channel, scanner));
-                    uploadFile(channel, scanner);
+                    uploadFile(serverIP, serverPort, scanner);
                     break;
                 case "Q":
-                    quit(channel);
+                    quit();
                     break loop;
                 default:
                     System.out.println("Invalid command, try again");
             }
-            channel.close();
+            //channel.close();
         }
     }
 
-    private static void quit(SocketChannel channel) throws IOException {
-        channel.close();
+    private static void quit() throws IOException {
+        System.out.println("Bye!");
     }
 
-    private static void uploadFile(SocketChannel channel, Scanner scanner) throws IOException {
+    private static void uploadFile(String serverIP, int serverPort, Scanner scanner) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(serverIP, serverPort));
         System.out.println("Enter the file name to be uploaded:");
         String filePath = scanner.nextLine();
         File file = new File("ClientFiles", filePath);
@@ -112,12 +115,14 @@ public class Client {
         } else {
             System.out.println("No response received from server.");
         }
-
+        channel.close();
 
 
     }
 
-    private static void downloadFile(SocketChannel channel, Scanner scanner) throws IOException {
+    private static void downloadFile(String serverIP, int serverPort, Scanner scanner) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(serverIP, serverPort));
         System.out.println("Enter the file name to be downloaded:");
         String fileName = scanner.nextLine();
         String request = "DOWNLOAD|" + fileName;
@@ -156,7 +161,9 @@ public class Client {
         }
     }
 
-    private static void renameFile(SocketChannel channel, Scanner scanner) throws IOException {
+    private static void renameFile(String serverIP, int serverPort, Scanner scanner) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(serverIP, serverPort));
         System.out.println("Enter the old file name:");
         String oldFileName = scanner.nextLine();
 
@@ -194,7 +201,9 @@ public class Client {
 
     }
 
-    private static void deleteFile(SocketChannel channel, Scanner scanner) throws IOException {
+    private static void deleteFile(String serverIP, int serverPort, Scanner scanner) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(serverIP, serverPort));
         System.out.println("Enter the file name to be deleted:");
         String fileName = scanner.nextLine();
 
@@ -226,9 +235,12 @@ public class Client {
         } else {
             System.out.println("No response received from server.");
         }
+        channel.close();
     }
 
-    private static void listFiles(SocketChannel channel) throws IOException {
+    private static void listFiles(String serverIP, int serverPort) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.connect(new InetSocketAddress(serverIP, serverPort));
         System.out.println("Requesting file list from server...");
         String request = "LIST";
         ByteBuffer byteBuffer = ByteBuffer.wrap(request.getBytes());
@@ -254,6 +266,7 @@ public class Client {
                 System.out.println("No files found");
             }
             responseBuffer.clear();
+            channel.close();
         }
     }
 
